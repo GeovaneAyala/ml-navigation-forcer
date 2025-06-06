@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel de Testes POC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline';" />
+  <meta name="referrer" content="no-referrer" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: #f5f5f5;
+      overflow: hidden;
+    }
+
+    .alerta {
+      background: #c00;
+      color: white;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    #painel {
+      position: fixed;
+      top: 36px;
+      left: 0;
+      z-index: 9999;
+      width: 100%;
+      background: #222;
+      color: white;
+      padding: 10px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #painel input {
+      flex: 1;
+      padding: 8px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      min-width: 200px;
+    }
+
+    #painel button {
+      padding: 8px 14px;
+      background: #ffcc00;
+      color: #000;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    iframe {
+      position: absolute;
+      top: 90px;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 90px);
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="alerta">
+    ⚠️ Esta página é uma PoC ética. Nenhum dado será coletado.
+  </div>
+
+  <div id="painel">
+    <input type="text" id="comando" placeholder="Ex: iphone 15, saldo, cartões, pix, dados..." />
+    <button onclick="interpretar()">Ir</button>
+  </div>
+
+  <iframe id="iframeMP" src="https://www.mercadolivre.com.br"></iframe>
+
+  <script>
+    const iframe = document.getElementById("iframeMP");
+
+    const comandosEspeciais = {
+      "saldo": "https://www.mercadopago.com.br/banking/balance",
+      "inicio": "https://www.mercadopago.com.br/home",
+      "saque": "https://www.mercadopago.com.br/withdraw#from=home_desktop&oc.component=hs_banking",
+      "pix": "https://www.mercadopago.com.br/money-out/transfer/pix-methods#from=dashboard&flow_detail=new_transfer",
+      "cartoes": "https://www.mercadopago.com.br/cards/cards-listing",
+      "dados": "https://www.mercadopago.com.br/hub-engine/hubs/my-data"
+    };
+
+    function interpretar() {
+      const input = document.getElementById("comando").value.trim().toLowerCase();
+      if (!input) return;
+
+      if (comandosEspeciais[input]) {
+        iframe.src = comandosEspeciais[input];
+        console.log("🔐 Redirecionado para:", comandosEspeciais[input]);
+      } else {
+        const termoURL = input.toLowerCase().replace(/\s+/g, "-");
+        const termoEncoded = encodeURIComponent(input);
+        const parcial = termoEncoded.slice(0, 4);
+        const url = `https://lista.mercadolivre.com.br/${termoURL}#D[A:${termoEncoded}]&origin=UNKNOWN&as.comp_t=SUG&as.comp_v=${parcial}&as.comp_id=SUG`;
+        iframe.src = url;
+        console.log("🔎 Pesquisa forçada:", url);
+      }
+    }
+  </script>
+
+</body>
+</html>

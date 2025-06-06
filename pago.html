@@ -1,31 +1,44 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Painel de Navegação Forçada - Mercado Pago</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>Painel de Testes POC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline';" />
+  <meta name="referrer" content="no-referrer" />
   <style>
     html, body {
       margin: 0;
       padding: 0;
       font-family: sans-serif;
-      background: #fff;
+      background: #f5f5f5;
       overflow: hidden;
+    }
+
+    .alerta {
+      background: #c00;
+      color: white;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+      font-weight: bold;
     }
 
     #painel {
       position: fixed;
-      top: 0;
+      top: 36px;
       left: 0;
       z-index: 9999;
       width: 100%;
-      background: #000;
+      background: #222;
       color: white;
       padding: 10px;
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
       align-items: center;
+      justify-content: center;
     }
 
     #painel button {
@@ -36,19 +49,24 @@
       cursor: pointer;
       color: #000;
       font-weight: bold;
+      border-radius: 4px;
     }
 
     iframe {
       position: absolute;
-      top: 90px;
+      top: 100px;
       left: 0;
       width: 100%;
-      height: calc(100% - 90px);
+      height: calc(100% - 100px);
       border: none;
     }
   </style>
 </head>
 <body>
+
+  <div class="alerta">
+    ⚠️ Esta página é uma PoC ética para fins de demonstração. Nenhum dado é coletado.
+  </div>
 
   <div id="painel">
     <button onclick="navegar('https://www.mercadopago.com.br/home')">🏠 Início</button>
@@ -59,10 +77,10 @@
     <button onclick="navegar('https://www.mercadopago.com.br/hub-engine/hubs/my-data')">📇 Meus dados</button>
   </div>
 
-  <iframe id="iframeML" src="https://www.mercadolivre.com.br/"></iframe>
+  <iframe id="iframeMP" src="https://www.mercadolivre.com.br/"></iframe>
 
   <script>
-    const iframe = document.getElementById("iframeML");
+    const iframe = document.getElementById("iframeMP");
 
     function navegar(url) {
       iframe.src = url;

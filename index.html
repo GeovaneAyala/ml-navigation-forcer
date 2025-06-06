@@ -2,15 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Mercado Livre - Navegação Forçada</title>
+  <title>Painel de Navegação Forçada - Mercado Pago</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     html, body {
       margin: 0;
       padding: 0;
-      overflow: hidden;
       font-family: sans-serif;
       background: #fff;
+      overflow: hidden;
     }
 
     #painel {
@@ -23,32 +23,27 @@
       color: white;
       padding: 10px;
       display: flex;
-      gap: 10px;
+      flex-wrap: wrap;
+      gap: 6px;
       align-items: center;
     }
 
-    #painel input {
-      flex: 1;
-      padding: 8px;
-      font-size: 14px;
-      border: none;
-    }
-
     #painel button {
-      padding: 8px 14px;
+      padding: 8px 12px;
+      font-size: 14px;
       background: #ffcc00;
-      color: #000;
-      font-weight: bold;
       border: none;
       cursor: pointer;
+      color: #000;
+      font-weight: bold;
     }
 
     iframe {
       position: absolute;
-      top: 50px;
+      top: 90px;
       left: 0;
       width: 100%;
-      height: calc(100% - 50px);
+      height: calc(100% - 90px);
       border: none;
     }
   </style>
@@ -56,28 +51,22 @@
 <body>
 
   <div id="painel">
-    <label for="pesquisa">🔍 Forçar pesquisa:</label>
-    <input type="text" id="pesquisa" placeholder="Ex: iPhone 15, Motorola G20, etc.">
-    <button onclick="forcarNavegacao()">Ir</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/home')">🏠 Início</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/banking/balance')">💰 Saldo</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/withdraw#from=home_desktop&oc.component=hs_banking')">🏦 Saque</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/money-out/transfer/pix-methods#from=dashboard&flow_detail=new_transfer')">⚡ Pix</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/cards/cards-listing')">💳 Cartões</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/hub-engine/hubs/my-data')">📇 Meus dados</button>
   </div>
 
-  <iframe id="mlFrame" src="https://www.mercadolivre.com.br/"></iframe>
+  <iframe id="iframeML" src="https://www.mercadolivre.com.br/"></iframe>
 
   <script>
-    const frame = document.getElementById("mlFrame");
+    const iframe = document.getElementById("iframeML");
 
-    function forcarNavegacao() {
-      const input = document.getElementById("pesquisa").value.trim();
-      if (!input) return;
-
-      const termoURL = input.toLowerCase().replace(/\s+/g, "-");
-      const termoEncoded = encodeURIComponent(input);
-      const parcial = termoEncoded.slice(0, 4);
-
-      const urlForcada = `https://lista.mercadolivre.com.br/${termoURL}#D[A:${termoEncoded}]&origin=UNKNOWN&as.comp_t=SUG&as.comp_v=${parcial}&as.comp_id=SUG`;
-
-      frame.src = urlForcada;
-      console.log("➡️ Redirecionado para:", urlForcada);
+    function navegar(url) {
+      iframe.src = url;
+      console.log("➡️ Redirecionado para:", url);
     }
   </script>
 

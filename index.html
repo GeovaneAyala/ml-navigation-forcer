@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Mercado Livre - Navegação Forçada</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #fff;
+    }
+
+    #painel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9999;
+      width: 100%;
+      background: #000;
+      color: white;
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #painel input {
+      flex: 1;
+      padding: 8px;
+      font-size: 14px;
+      border: none;
+    }
+
+    #painel button {
+      padding: 8px 14px;
+      background: #ffcc00;
+      color: #000;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+
+    iframe {
+      position: absolute;
+      top: 50px;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 50px);
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="painel">
+    <label for="pesquisa">🔍 Forçar pesquisa:</label>
+    <input type="text" id="pesquisa" placeholder="Ex: iPhone 15, Motorola G20, etc.">
+    <button onclick="forcarNavegacao()">Ir</button>
+  </div>
+
+  <iframe id="mlFrame" src="https://www.mercadolivre.com.br/"></iframe>
+
+  <script>
+    const frame = document.getElementById("mlFrame");
+
+    function forcarNavegacao() {
+      const input = document.getElementById("pesquisa").value.trim();
+      if (!input) return;
+
+      const termoURL = input.toLowerCase().replace(/\s+/g, "-");
+      const termoEncoded = encodeURIComponent(input);
+      const parcial = termoEncoded.slice(0, 4);
+
+      const urlForcada = `https://lista.mercadolivre.com.br/${termoURL}#D[A:${termoEncoded}]&origin=UNKNOWN&as.comp_t=SUG&as.comp_v=${parcial}&as.comp_id=SUG`;
+
+      frame.src = urlForcada;
+      console.log("➡️ Redirecionado para:", urlForcada);
+    }
+  </script>
+
+</body>
+</html>

